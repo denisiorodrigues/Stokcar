@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Stokcar.Data\Stokcar.Data.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\imagens\" />
+  </ItemGroup>
+
 </Project>

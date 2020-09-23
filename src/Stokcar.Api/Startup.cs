@@ -29,16 +29,27 @@ namespace Stokcar.Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<MeuDbContext>(options => 
+            services.AddDbContext<MeuDbContext>(options =>
             {
-                options.UseSqlServer(Configuration.GetConnectionString(name:"DefaultConnection"));
+                options.UseSqlServer(Configuration.GetConnectionString(name: "DefaultConnection"));
             });
-            
+
             services.AddAutoMapper(typeof(Startup));
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
+            //Configuração para desativar notificação de erro do MVC e deixar nossos erros personalizados
             services.Configure<ApiBehaviorOptions>(options => { options.SuppressModelStateInvalidFilter = true; });
+
+            //Desabilitando as configurações de segurança do CORS
+            services.AddCors(options =>
+            {
+                options.AddPolicy("Development", 
+                    builder => builder.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials());
+            });
 
             services.ResolveDependencies();
         }
@@ -56,6 +67,7 @@ namespace Stokcar.Api
                 app.UseHsts();
             }
 
+            app.UseCors("Development");
             app.UseHttpsRedirection();
             app.UseMvc();
         }

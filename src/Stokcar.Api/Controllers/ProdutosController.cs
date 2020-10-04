@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Stokcar.Api.ViewModel;
 using Stokcar.Business.Intefaces;
@@ -57,10 +58,28 @@ namespace Stokcar.Api.Controllers
             var imagemNome = Guid.NewGuid() + "_" + produtoViewModel.Imagem;
             if (!UploadArquivo(produtoViewModel.ImagemUpload, imagemNome))
             {
-                return CustomResponse();
+                return CustomResponse(ModelState);
             }
 
             produtoViewModel.Imagem = imagemNome;
+
+            await _produtoRespository.Adicionar(_mapper.Map<Produto>(produtoViewModel));
+
+            return CustomResponse(produtoViewModel);
+        }
+
+        [HttpPost("Adicionar")]
+        public async Task<ActionResult<ProdutoViewModel>> AdicionarAlternativo(ProdutoImagemViewModel produtoViewModel)
+        {
+            if (!ModelState.IsValid) return CustomResponse(ModelState);
+
+            var imgPrefixo = Guid.NewGuid() + "_";
+            if (!UploadArquivoAlternativo(produtoViewModel.ImagemUpload, imgPrefixo))
+            {
+                return CustomResponse(ModelState);
+            }
+
+            produtoViewModel.Imagem = imgPrefixo + produtoViewModel.ImagemUpload;
 
             await _produtoRespository.Adicionar(_mapper.Map<Produto>(produtoViewModel));
 
@@ -88,6 +107,40 @@ namespace Stokcar.Api.Controllers
             System.IO.File.WriteAllBytes(filePath, imagemDataByteArray);
 
             return true;
+        }
+
+        private bool UploadArquivoAlternativo(IFormFile arquivo, string imgPrefixo)
+        {
+            if (arquivo == null || arquivo.Length == 0)
+            {
+                NotificarErro("Forneça uma imagem para este produto!");
+                return false;
+            }
+
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/app/demo-webapi/src/assets", imgPrefixo + arquivo.FileName);
+
+            if (System.IO.File.Exists(path))
+            {
+                NotificarErro("Já existe um arquivo com este nome!");
+                return false;
+            }
+
+            using (var stream = new FileStream(path, FileMode.Create))
+            {
+                arquivo.CopyToAsync(stream);
+            }
+            
+            return true;
+        }
+
+        //Ilimitado
+        [DisableRequestSizeLimit]
+        //Limitando a 40BM
+        //[RequestSizeLimit(40000000)] 
+        [HttpPost("imagem")]
+        public async Task<ActionResult> AdicionarImagem(IFormFile file)
+        {
+            return Ok(file);
         }
 
         [HttpDelete("{id:guid}")]

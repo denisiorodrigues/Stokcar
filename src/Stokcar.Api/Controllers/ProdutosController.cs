@@ -24,7 +24,7 @@ namespace Stokcar.Api.Controllers
         public ProdutosController(IEnderecoRepository enderecoRespository,
                                   IFornecedorRepository fornecedorRespository,
                                   IProdutoRepository produtoRepository,
-                                  IMapper mapper, 
+                                  IMapper mapper,
                                   INotificador notificador) : base(notificador)
         {
             _enderecoRespository = enderecoRespository;
@@ -44,7 +44,7 @@ namespace Stokcar.Api.Controllers
         public async Task<ActionResult<ProdutoViewModel>> ObterPorId(Guid id)
         {
             var produtoViewModel = await ObterProduto(id);
-            
+
             if (produtoViewModel == null) return NotFound();
 
             return produtoViewModel;
@@ -90,7 +90,7 @@ namespace Stokcar.Api.Controllers
         {
             if (string.IsNullOrEmpty(arquivo))
             {
-               NotificarErro("Forneça uma imagem para este produto!");
+                NotificarErro("Forneça uma imagem para este produto!");
                 return false;
             }
 
@@ -129,7 +129,7 @@ namespace Stokcar.Api.Controllers
             {
                 arquivo.CopyToAsync(stream);
             }
-            
+
             return true;
         }
 
@@ -141,6 +141,40 @@ namespace Stokcar.Api.Controllers
         public async Task<ActionResult> AdicionarImagem(IFormFile file)
         {
             return Ok(file);
+        }
+
+        [HttpPut]
+        public async Task<ActionResult<ProdutoViewModel>> Atualizar(Guid id, ProdutoViewModel produtoViewModel)
+        {
+            if (id != produtoViewModel.Id)
+            {
+                NotificarErro("Ids ~diferentes para atulização.");
+                return CustomResponse();
+            }
+
+            var produtoAtualizacao = await ObterProduto(id);
+            produtoViewModel.Imagem = produtoAtualizacao.Imagem;
+            if (!ModelState.IsValid) return CustomResponse(ModelState);
+
+            if (produtoViewModel.ImagemUpload != null)
+            {
+                var imagemNome = Guid.NewGuid() + "_" + produtoViewModel.Imagem;
+                if (!UploadArquivo(produtoViewModel.ImagemUpload, imagemNome))
+                {
+                    return CustomResponse(ModelState);
+                }
+
+                produtoAtualizacao.Imagem = imagemNome;
+            }
+
+            produtoAtualizacao.Nome = produtoViewModel.Nome;
+            produtoAtualizacao.Descricao = produtoViewModel.Descricao;
+            produtoAtualizacao.Valor = produtoViewModel.Valor;
+            produtoAtualizacao.Ativo = produtoViewModel.Ativo;
+
+            await _produtoRespository.Atualizar(_mapper.Map<Produto>(produtoAtualizacao));
+
+            return CustomResponse(produtoAtualizacao);
         }
 
         [HttpDelete("{id:guid}")]
